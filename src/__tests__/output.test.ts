@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { Writable } from "node:stream";
 import { print, printError, printSuccess, defaultFormat } from "../lib/output.js";
 

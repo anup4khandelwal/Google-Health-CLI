@@ -2,7 +2,7 @@
 
 Unofficial TypeScript CLI for the [Google Health API v4](https://health.googleapis.com). Provides OAuth2 setup, data queries, rollups, profile and settings access, webhook subscriber management, and predictable JSON output for scripts and agents.
 
-> **TypeScript rewrite** of [rudrankriyam/Google-Health-CLI](https://github.com/rudrankriyam/Google-Health-CLI) using Node.js 20+, Commander v12, and native `fetch`.
+> **TypeScript rewrite** of [rudrankriyam/Google-Health-CLI](https://github.com/rudrankriyam/Google-Health-CLI) using Bun, Commander v12, and native `fetch`.
 
 ---
 
@@ -18,14 +18,14 @@ Unofficial TypeScript CLI for the [Google Health API v4](https://health.googleap
 
 ## Requirements
 
-- Node.js >= 20.0.0
+- [Bun](https://bun.sh) >= 1.0.0
 
 ## Installation
 
 ```bash
-npm install -g google-health-cli
+bun install -g google-health-cli
 # or run without installing:
-npx google-health-cli --help
+bunx google-health-cli --help
 ```
 
 ## Quick Start
@@ -196,11 +196,11 @@ Auto-detection: table when stdout is a TTY, JSON otherwise. Override with `GHEAL
 ```bash
 git clone https://github.com/anup4khandelwal/google-health-cli
 cd google-health-cli
-npm install
-npm run dev -- types list        # Run without building
-npm run build                    # Compile to dist/
-npm test                         # Run tests
-npm run typecheck                # Type-check only
+bun install
+bun run dev -- types list        # Run directly (no build needed)
+bun run build                    # Bundle to dist/ (~33ms)
+bun test                         # Run tests
+bun run typecheck                # Type-check only
 ```
 
 ## License

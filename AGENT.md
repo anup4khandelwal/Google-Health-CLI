@@ -7,9 +7,9 @@ Guidelines for AI agents and automated tools working with `ghealth` — the unof
 Always use `--help` to discover commands rather than assuming structure:
 
 ```bash
-node dist/index.js --help
-node dist/index.js data --help
-node dist/index.js auth --help
+bun run dist/index.js --help
+bun run dist/index.js data --help
+bun run dist/index.js auth --help
 ```
 
 Or use the built-in agent commands:
@@ -62,23 +62,23 @@ Force a format globally: `ghealth --format json <command>` or `export GHEALTH_OU
 ## Build & Test
 
 ```bash
-npm install          # install dependencies
-npm run build        # compile TypeScript → dist/ via tsup
-npm test             # run unit tests (vitest)
-npm run typecheck    # type-check without emitting
-npm run dev -- <cmd> # run without building (tsx)
+bun install          # install dependencies
+bun run build        # bundle TypeScript → dist/index.js (Bun bundler, ~33ms)
+bun test             # run unit tests (Bun built-in test runner)
+bun run typecheck    # type-check without emitting
+bun run dev -- <cmd> # run directly without building (bun runs TS natively)
 ```
 
-The compiled binary is `dist/index.js` (ESM, shebang included). After build:
+The bundled binary is `dist/index.js`. After build:
 
 ```bash
-node dist/index.js --help
+bun run dist/index.js --help
 ```
 
 Or link globally:
 
 ```bash
-npm link
+bun link
 ghealth --help
 ```
 
@@ -94,7 +94,7 @@ src/
 │   ├── output.ts             # Multi-format printer (table/json/ndjson/csv/md)
 │   └── healthapi/client.ts   # Typed HTTP client for Google Health API v4
 ├── commands/                 # One file per command group
-└── __tests__/                # Vitest unit tests
+└── __tests__/                # Bun unit tests
 ```
 
 Key modules to read before modifying:
@@ -137,9 +137,9 @@ try {
 
 ## Definition of Done
 
-- [ ] `npm run build` succeeds with no errors
-- [ ] `npm run typecheck` passes with zero diagnostics
-- [ ] `npm test` — all tests pass; new behaviour has test coverage
+- [ ] `bun run build` succeeds with no errors
+- [ ] `bun run typecheck` passes with zero diagnostics
+- [ ] `bun test` — all tests pass; new behaviour has test coverage
 - [ ] `--help` output for new/changed commands is accurate
 - [ ] README examples match actual flag names
 - [ ] JSON output fields are documented if publicly consumed
