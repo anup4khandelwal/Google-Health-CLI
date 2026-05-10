@@ -1,0 +1,364 @@
+export const SCOPES = {
+  PROFILE_READ: "https://www.googleapis.com/auth/health.profile.read",
+  PROFILE_WRITE: "https://www.googleapis.com/auth/health.profile.write",
+  SETTINGS_READ: "https://www.googleapis.com/auth/health.settings.read",
+  SETTINGS_WRITE: "https://www.googleapis.com/auth/health.settings.write",
+  ACTIVITY_READ: "https://www.googleapis.com/auth/health.activity.read",
+  ACTIVITY_WRITE: "https://www.googleapis.com/auth/health.activity.write",
+  METRICS_READ: "https://www.googleapis.com/auth/health.metrics.read",
+  METRICS_WRITE: "https://www.googleapis.com/auth/health.metrics.write",
+  SLEEP_READ: "https://www.googleapis.com/auth/health.sleep.read",
+  SLEEP_WRITE: "https://www.googleapis.com/auth/health.sleep.write",
+  NUTRITION_READ: "https://www.googleapis.com/auth/health.nutrition.read",
+  NUTRITION_WRITE: "https://www.googleapis.com/auth/health.nutrition.write",
+} as const;
+
+export type Scope = (typeof SCOPES)[keyof typeof SCOPES];
+
+export type RecordType = "Interval" | "Sample" | "Session" | "Daily";
+
+export interface DataType {
+  name: string;
+  endpoint: string;
+  filterName: string;
+  recordType: RecordType;
+  operations: string[];
+  scope: Scope;
+  timeField: string;
+}
+
+export interface RESTOperation {
+  method: string;
+  path: string;
+  description: string;
+}
+
+export const DATA_TYPES: DataType[] = [
+  {
+    name: "steps",
+    endpoint: "steps",
+    filterName: "StepsRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "distance",
+    endpoint: "distance",
+    filterName: "DistanceRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "calories",
+    endpoint: "caloriesBurned",
+    filterName: "TotalCaloriesBurnedRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "active-calories",
+    endpoint: "activeCaloriesBurned",
+    filterName: "ActiveCaloriesBurnedRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "exercise",
+    endpoint: "exerciseSessions",
+    filterName: "ExerciseSessionRecord",
+    recordType: "Session",
+    operations: ["list", "get", "create", "patch", "delete", "export-tcx"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "active-minutes",
+    endpoint: "activeMinutes",
+    filterName: "ActiveMinutesRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "heart-rate",
+    endpoint: "heartRate",
+    filterName: "HeartRateRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "resting-heart-rate",
+    endpoint: "restingHeartRate",
+    filterName: "RestingHeartRateRecord",
+    recordType: "Daily",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "heart-rate-variability",
+    endpoint: "heartRateVariabilityRmssd",
+    filterName: "HeartRateVariabilityRmssdRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "oxygen-saturation",
+    endpoint: "oxygenSaturation",
+    filterName: "OxygenSaturationRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "respiratory-rate",
+    endpoint: "respiratoryRate",
+    filterName: "RespiratoryRateRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "blood-pressure",
+    endpoint: "bloodPressure",
+    filterName: "BloodPressureRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "blood-glucose",
+    endpoint: "bloodGlucose",
+    filterName: "BloodGlucoseRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "body-temperature",
+    endpoint: "bodyTemperature",
+    filterName: "BodyTemperatureRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "basal-metabolic-rate",
+    endpoint: "basalMetabolicRate",
+    filterName: "BasalMetabolicRateRecord",
+    recordType: "Daily",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "weight",
+    endpoint: "weight",
+    filterName: "WeightRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "height",
+    endpoint: "height",
+    filterName: "HeightRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "body-fat",
+    endpoint: "bodyFat",
+    filterName: "BodyFatRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "lean-body-mass",
+    endpoint: "leanBodyMass",
+    filterName: "LeanBodyMassRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "bone-mass",
+    endpoint: "boneMass",
+    filterName: "BoneMassRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "sleep",
+    endpoint: "sleepSessions",
+    filterName: "SleepSessionRecord",
+    recordType: "Session",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.SLEEP_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "nutrition",
+    endpoint: "nutrition",
+    filterName: "NutritionRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.NUTRITION_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "hydration",
+    endpoint: "hydration",
+    filterName: "HydrationRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.NUTRITION_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "elevation-gained",
+    endpoint: "elevationGained",
+    filterName: "ElevationGainedRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "floors-climbed",
+    endpoint: "floorsClimbed",
+    filterName: "FloorsClimbedRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "speed",
+    endpoint: "speed",
+    filterName: "SpeedRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "time",
+  },
+  {
+    name: "power",
+    endpoint: "power",
+    filterName: "PowerRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "time",
+  },
+  {
+    name: "cycling-pedaling-cadence",
+    endpoint: "cyclingPedalingCadence",
+    filterName: "CyclingPedalingCadenceRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "time",
+  },
+  {
+    name: "intermenstrual-bleeding",
+    endpoint: "intermenstrualBleeding",
+    filterName: "IntermenstrualBleedingRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "cervical-mucus",
+    endpoint: "cervicalMucus",
+    filterName: "CervicalMucusRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+  {
+    name: "ovulation-test",
+    endpoint: "ovulationTest",
+    filterName: "OvulationTestRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
+  },
+];
+
+export const REST_OPERATIONS: RESTOperation[] = [
+  { method: "GET", path: "users/{userId}/profile", description: "Get user profile" },
+  { method: "PATCH", path: "users/{userId}/profile", description: "Update user profile" },
+  { method: "GET", path: "users/{userId}/settings", description: "Get user settings" },
+  { method: "PATCH", path: "users/{userId}/settings", description: "Update user settings" },
+  { method: "GET", path: "users/{userId}/identity", description: "Get user identity" },
+  { method: "GET", path: "users/{userId}/{dataType}", description: "List data points" },
+  { method: "GET", path: "users/{userId}/{dataType}/{dataId}", description: "Get data point" },
+  { method: "POST", path: "users/{userId}/{dataType}", description: "Create data point" },
+  { method: "PATCH", path: "users/{userId}/{dataType}/{dataId}", description: "Patch data point" },
+  { method: "DELETE", path: "users/{userId}/{dataType}/{dataId}", description: "Delete data point" },
+  { method: "POST", path: "users/{userId}/{dataType}:batchDelete", description: "Batch delete data points" },
+  { method: "POST", path: "users/{userId}/{dataType}:reconcile", description: "Reconcile data" },
+  { method: "GET", path: "users/{userId}/rollups:daily", description: "Daily rollup" },
+  { method: "GET", path: "users/{userId}/rollups:physical", description: "Physical rollup" },
+  { method: "GET", path: "users/{userId}/exerciseSessions/{sessionId}:exportTcx", description: "Export exercise session as TCX" },
+  { method: "GET", path: "projects/{projectId}/subscribers", description: "List subscribers" },
+  { method: "POST", path: "projects/{projectId}/subscribers", description: "Create subscriber" },
+  { method: "PATCH", path: "projects/{projectId}/subscribers/{subscriberId}", description: "Patch subscriber" },
+  { method: "DELETE", path: "projects/{projectId}/subscribers/{subscriberId}", description: "Delete subscriber" },
+];
+
+export function readOnlyScopes(): Scope[] {
+  return Object.values(SCOPES).filter((s) => s.endsWith(".read")) as Scope[];
+}
+
+export function writeScopes(): Scope[] {
+  return Object.values(SCOPES).filter((s) => s.endsWith(".write")) as Scope[];
+}
+
+export function allScopes(): Scope[] {
+  return Object.values(SCOPES) as Scope[];
+}
+
+export function lookupType(query: string): DataType | undefined {
+  const q = query.toLowerCase();
+  return DATA_TYPES.find(
+    (t) =>
+      t.name === q ||
+      t.endpoint.toLowerCase() === q ||
+      t.filterName.toLowerCase() === q,
+  );
+}
+
+export function getTypes(): DataType[] {
+  return [...DATA_TYPES].sort((a, b) => a.endpoint.localeCompare(b.endpoint));
+}
