@@ -13,12 +13,13 @@ import { makeEndpointsCommand } from "./commands/endpoints.js";
 import { makeDoctorCommand } from "./commands/doctor.js";
 import { makeAgentCommand } from "./commands/agent.js";
 import { makeAPICommand } from "./commands/api.js";
+import { makeProfileCmdCommand } from "./commands/profile-cmd.js";
+import { makeCompletionCommand } from "./commands/completion.js";
 
 const VERSION = "1.0.0";
 
 const program = new Command();
 
-// Shared output options state
 const sharedOpts: OutputOptions = {};
 
 function getOutputOpts(): OutputOptions {
@@ -35,6 +36,8 @@ program
   .option("--base-url <url>", "Override the API base URL")
   .option("--user <user>", "Override the user resource (default: me)")
   .option("--project <project>", "Override the project ID")
+  .option("--profile <name>", "Use a named configuration profile (default: default)")
+  .option("--retries <n>", "Default retry count for API calls (default: 3)")
   .hook("preAction", (thisCommand) => {
     const opts = thisCommand.opts<{
       json?: boolean;
@@ -43,16 +46,19 @@ program
       baseUrl?: string;
       user?: string;
       project?: string;
+      profile?: string;
+      retries?: string;
     }>();
 
     if (opts.json) sharedOpts.format = "json";
     else if (opts.format) sharedOpts.format = opts.format as OutputFormat;
     if (opts.pretty) sharedOpts.pretty = true;
 
-    // Apply environment overrides for base URL, user, project
     if (opts.baseUrl) process.env["GHEALTH_BASE_URL"] = opts.baseUrl;
     if (opts.user) process.env["GHEALTH_USER"] = opts.user;
     if (opts.project) process.env["GHEALTH_PROJECT"] = opts.project;
+    if (opts.profile) process.env["GHEALTH_PROFILE"] = opts.profile;
+    if (opts.retries) process.env["GHEALTH_RETRIES"] = opts.retries;
   });
 
 program.addCommand(makeAuthCommand(getOutputOpts));
@@ -66,8 +72,10 @@ program.addCommand(makeSubscribersCommand(getOutputOpts));
 program.addCommand(makeTypesCommand(getOutputOpts));
 program.addCommand(makeEndpointsCommand(getOutputOpts));
 program.addCommand(makeDoctorCommand(getOutputOpts));
+program.addCommand(makeProfileCmdCommand(getOutputOpts));
 program.addCommand(makeAgentCommand(getOutputOpts));
 program.addCommand(makeAPICommand(getOutputOpts));
+program.addCommand(makeCompletionCommand(getOutputOpts));
 
 program.parseAsync(process.argv).catch((err) => {
   console.error("Fatal:", err);

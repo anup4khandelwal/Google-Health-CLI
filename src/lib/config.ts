@@ -26,7 +26,11 @@ const DEFAULT_CONFIG: Config = {
   redirectUrl: "http://localhost:9876/callback",
 };
 
-function getConfigDir(): string {
+export function getActiveProfile(): string {
+  return process.env["GHEALTH_PROFILE"] ?? "default";
+}
+
+function getBaseConfigDir(): string {
   const envDir = process.env["GHEALTH_CONFIG_DIR"];
   if (envDir) return envDir;
 
@@ -40,22 +44,47 @@ function getConfigDir(): string {
   return join(process.env["XDG_CONFIG_HOME"] ?? join(homedir(), ".config"), "ghealth");
 }
 
+function getConfigDir(): string {
+  const base = getBaseConfigDir();
+  const profile = getActiveProfile();
+  return profile === "default" ? base : join(base, "profiles", profile);
+}
+
 function getTokenFile(): string {
   return process.env["GHEALTH_TOKEN_FILE"] ?? join(getConfigDir(), "token.json");
 }
 
+export function listProfiles(): string[] {
+  const base = getBaseConfigDir();
+  const profilesDir = join(base, "profiles");
+  const profiles = ["default"];
+  try {
+    const { readdirSync, statSync } = require("node:fs") as typeof import("node:fs");
+    for (const entry of readdirSync(profilesDir)) {
+      if (statSync(join(profilesDir, entry)).isDirectory()) {
+        profiles.push(entry);
+      }
+    }
+  } catch {
+    // profiles dir doesn't exist yet
+  }
+  return profiles;
+}
+
 let store: Conf<Config> | null = null;
+let storeProfile: string | null = null;
 
 function getStore(): Conf<Config> {
-  if (!store) {
+  const profile = getActiveProfile();
+  if (!store || storeProfile !== profile) {
     const configDir = getConfigDir();
     if (!existsSync(configDir)) mkdirSync(configDir, { recursive: true });
-
     store = new Conf<Config>({
       projectName: "ghealth",
       cwd: configDir,
       defaults: DEFAULT_CONFIG,
     });
+    storeProfile = profile;
   }
   return store;
 }

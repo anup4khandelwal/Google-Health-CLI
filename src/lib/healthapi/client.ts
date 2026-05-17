@@ -1,6 +1,7 @@
 import { getValidToken } from "../auth.js";
 import { loadConfig } from "../config.js";
 import { NotLoggedInError } from "../auth.js";
+import { withRetry, type RetryOptions } from "../retry.js";
 
 export class APIError extends Error {
   constructor(
@@ -75,16 +76,18 @@ export class HealthClient {
   private readonly baseUrl: string;
   private readonly user: string;
   private readonly project: string;
+  private readonly retryOptions: RetryOptions;
 
-  constructor(baseUrl: string, user: string, project: string) {
+  constructor(baseUrl: string, user: string, project: string, retryOptions: RetryOptions = {}) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
     this.user = user;
     this.project = project;
+    this.retryOptions = retryOptions;
   }
 
-  static async create(): Promise<HealthClient> {
+  static async create(retryOptions?: RetryOptions): Promise<HealthClient> {
     const cfg = loadConfig();
-    return new HealthClient(cfg.baseUrl, cfg.user, cfg.project);
+    return new HealthClient(cfg.baseUrl, cfg.user, cfg.project, retryOptions);
   }
 
   private async authHeader(): Promise<Record<string, string>> {
@@ -106,32 +109,38 @@ export class HealthClient {
     body?: unknown,
     params?: Record<string, string>,
   ): Promise<T> {
-    const auth = await this.authHeader();
-    const url = new URL(`${this.baseUrl}/${path}`);
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        url.searchParams.set(k, v);
+    return withRetry(async () => {
+      const auth = await this.authHeader();
+      const url = new URL(`${this.baseUrl}/${path}`);
+      if (params) {
+        for (const [k, v] of Object.entries(params)) {
+          url.searchParams.set(k, v);
+        }
       }
-    }
 
-    const res = await fetch(url.toString(), {
-      method,
-      headers: {
-        ...auth,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
+      const res = await fetch(url.toString(), {
+        method,
+        headers: {
+          ...auth,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
 
-    const text = await res.text();
+      const text = await res.text();
 
-    if (!res.ok) {
-      throw new APIError(res.status, res.statusText, text);
-    }
+      if (!res.ok) {
+        const err = new APIError(res.status, res.statusText, text);
+        // Attach retryAfter from Retry-After header for the retry engine
+        const retryAfter = res.headers.get("Retry-After");
+        if (retryAfter) (err as unknown as Record<string, unknown>)["retryAfter"] = parseInt(retryAfter, 10);
+        throw err;
+      }
 
-    if (!text) return {} as T;
-    return JSON.parse(text) as T;
+      if (!text) return {} as T;
+      return JSON.parse(text) as T;
+    }, this.retryOptions);
   }
 
   private async doBytes(method: string, path: string, params?: Record<string, string>): Promise<Buffer> {
@@ -187,6 +196,20 @@ export class HealthClient {
     if (opts.pageToken) params["pageToken"] = opts.pageToken;
     if (opts.filter) params["filter"] = opts.filter;
     return this.doJSON<JsonRecord>("GET", `${this.userPath()}/${dataType}`, undefined, params);
+  }
+
+  /** Fetch all pages for a data type, yielding each page's item array. */
+  async *listAllDataPoints(
+    dataType: string,
+    opts: Omit<ListOptions, "pageToken"> = {},
+  ): AsyncGenerator<JsonRecord[]> {
+    let pageToken: string | undefined;
+    do {
+      const result = await this.listDataPoints(dataType, { ...opts, pageToken });
+      const items = extractItems(result);
+      if (items.length > 0) yield items;
+      pageToken = (result["nextPageToken"] as string | undefined);
+    } while (pageToken);
   }
 
   async getDataPoint(dataType: string, dataId: string): Promise<JsonRecord> {
@@ -267,4 +290,13 @@ export class HealthClient {
     const cleanPath = path.startsWith("/") ? path.slice(1) : path;
     return this.doJSON<JsonRecord>(method.toUpperCase(), cleanPath, body, params);
   }
+}
+
+/** Extract the first array-valued field from an API response (for pagination). */
+export function extractItems(result: JsonRecord): JsonRecord[] {
+  for (const key of Object.keys(result)) {
+    if (key === "nextPageToken") continue;
+    if (Array.isArray(result[key])) return result[key] as JsonRecord[];
+  }
+  return [];
 }

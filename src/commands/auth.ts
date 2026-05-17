@@ -6,6 +6,7 @@ import {
   revokeRemote,
   loadToken,
   buildAuthUrl,
+  forceRefresh,
 } from "../lib/auth.js";
 import { loadConfig } from "../lib/config.js";
 import { readOnlyScopes, writeScopes, allScopes } from "../lib/registry.js";
@@ -111,6 +112,27 @@ export function makeAuthCommand(outOpts: () => OutputOptions): Command {
         printSuccess("Token revoked and local credentials removed", o);
       } catch (err) {
         printError({ status: "error", message: `Revoke failed: ${String(err)}` }, o);
+        process.exit(1);
+      }
+    });
+
+  auth
+    .command("refresh")
+    .description("Force-refresh the access token using the stored refresh token")
+    .action(async () => {
+      const o = outOpts();
+      try {
+        const token = await forceRefresh();
+        print(
+          {
+            status: "ok",
+            message: "Token refreshed",
+            expiresAt: token.expires_at ? new Date(token.expires_at * 1000).toISOString() : undefined,
+          },
+          o,
+        );
+      } catch (err) {
+        printError({ status: "error", message: String(err), hint: "Run: ghealth auth login" }, o);
         process.exit(1);
       }
     });

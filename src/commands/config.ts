@@ -1,11 +1,14 @@
 import { Command } from "commander";
+import { createInterface } from "node:readline";
 import {
   loadConfig,
   getConfigKey,
   setConfigKey,
   getConfigPath,
+  saveConfig,
   type Config,
 } from "../lib/config.js";
+import { readOnlyScopes } from "../lib/registry.js";
 import { print, printError, printSuccess, type OutputOptions } from "../lib/output.js";
 
 const VALID_KEYS: (keyof Config)[] = [
@@ -94,6 +97,33 @@ export function makeConfigCommand(outOpts: () => OutputOptions): Command {
       const o = outOpts();
       const p = getConfigPath();
       print({ path: p }, o);
+    });
+
+  cfg
+    .command("init")
+    .description("Interactive setup wizard — configure OAuth credentials and scopes")
+    .action(async () => {
+      const o = outOpts();
+      const current = loadConfig();
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const ask = (q: string): Promise<string> =>
+        new Promise((resolve) => rl.question(q, resolve));
+
+      process.stdout.write("ghealth setup wizard\n\n");
+
+      const clientId = (await ask(`Client ID [${current.clientId || "none"}]: `)).trim() || current.clientId;
+      const clientSecret = (await ask("Client Secret [keep existing]: ")).trim() || current.clientSecret;
+      const project = (await ask(`Project ID [${current.project || "none"}]: `)).trim() || current.project;
+      const defaultScopes = readOnlyScopes().join(",");
+      const scopesInput = (await ask(`Scopes (comma-separated) [read-only defaults]: `)).trim();
+      const scopes = scopesInput ? scopesInput.split(",").map((s) => s.trim()) : readOnlyScopes();
+
+      rl.close();
+
+      saveConfig({ clientId, clientSecret, project, scopes });
+      printSuccess("Configuration saved. Run: ghealth auth login", o);
+      print({ clientId, project, scopes }, o);
+      void defaultScopes;
     });
 
   return cfg;

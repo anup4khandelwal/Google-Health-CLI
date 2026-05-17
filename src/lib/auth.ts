@@ -181,6 +181,14 @@ export async function refreshToken(token: Token, clientId: string, clientSecret:
   return refreshed;
 }
 
+/** Force-refresh the stored token regardless of expiry. */
+export async function forceRefresh(): Promise<Token> {
+  const cfg = loadConfig();
+  const token = loadToken();
+  if (!token) throw new NotLoggedInError("Not logged in. Run: ghealth auth login");
+  return refreshToken(token, cfg.clientId, cfg.clientSecret);
+}
+
 export async function getValidToken(): Promise<Token> {
   const cfg = loadConfig();
   const token = loadToken();
