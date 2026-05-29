@@ -101,5 +101,88 @@ export function makeSubscribersCommand(outOpts: () => OutputOptions): Command {
       }
     });
 
+  // ── Subscriptions (per-user entries under a subscriber) ──────────────────
+  subs
+    .command("subscriptions-list <subscriberId>")
+    .description("List per-user subscriptions for a subscriber")
+    .option("--page-size <n>", "Max results per page")
+    .option("--page-token <token>", "Pagination token")
+    .action(async (subscriberId: string, opts) => {
+      const o = outOpts();
+      try {
+        const client = await HealthClient.create();
+        const result = await client.listSubscriptions(subscriberId, {
+          pageSize: opts.pageSize ? parseInt(opts.pageSize as string, 10) : undefined,
+          pageToken: opts.pageToken,
+        });
+        print(result, o);
+      } catch (err) {
+        handleError(err, o);
+      }
+    });
+
+  subs
+    .command("subscriptions-create <subscriberId>")
+    .description("Create a per-user subscription under a subscriber")
+    .requiredOption("--user <user>", "Health user ID (from ghealth identity)")
+    .option("--data-types <types>", "Comma-separated data types to subscribe to")
+    .option("--subscription-id <id>", "Optional custom subscription ID")
+    .action(async (subscriberId: string, opts) => {
+      const o = outOpts();
+      try {
+        const client = await HealthClient.create();
+        const result = await client.createSubscription(subscriberId, {
+          user: opts.user as string,
+          dataTypes: opts.dataTypes
+            ? (opts.dataTypes as string).split(",").map((s: string) => s.trim())
+            : undefined,
+          subscriptionId: opts.subscriptionId,
+        });
+        print(result, o);
+      } catch (err) {
+        handleError(err, o);
+      }
+    });
+
+  subs
+    .command("subscriptions-patch <subscriberId> <subscriptionId>")
+    .description("Update a per-user subscription (reads JSON from stdin or --file)")
+    .option("--file <path>", "JSON file to use as the request body")
+    .option("--update-mask <mask>", "Comma-separated field mask")
+    .action(async (subscriberId: string, subscriptionId: string, opts) => {
+      const o = outOpts();
+      try {
+        let body: Record<string, unknown>;
+        if (opts.file) {
+          body = JSON.parse(readFileSync(opts.file as string, "utf8")) as Record<string, unknown>;
+        } else {
+          const chunks: Buffer[] = [];
+          for await (const chunk of process.stdin) {
+            chunks.push(chunk as Buffer);
+          }
+          body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
+        }
+        const client = await HealthClient.create();
+        const result = await client.patchSubscription(subscriberId, subscriptionId, body, opts.updateMask as string | undefined);
+        print(result, o);
+      } catch (err) {
+        handleError(err, o);
+      }
+    });
+
+  subs
+    .command("subscriptions-delete <subscriberId> <subscriptionId>")
+    .description("Delete a per-user subscription")
+    .action(async (subscriberId: string, subscriptionId: string) => {
+      const o = outOpts();
+      try {
+        const client = await HealthClient.create();
+        await client.deleteSubscription(subscriberId, subscriptionId);
+        printSuccess(`Deleted subscription ${subscriptionId} from subscriber ${subscriberId}`, o);
+      } catch (err) {
+        handleError(err, o);
+      }
+    });
+
   return subs;
 }

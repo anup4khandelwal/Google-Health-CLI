@@ -285,6 +285,72 @@ export class HealthClient {
     await this.doJSON<void>("DELETE", `${this.projectPath()}/subscribers/${encodeURIComponent(subscriberId)}`);
   }
 
+  // IRN Profile
+  async getIrnProfile(): Promise<JsonRecord> {
+    return this.doJSON<JsonRecord>("GET", `${this.userPath()}/irnProfile`);
+  }
+
+  // Paired Devices
+  async listPairedDevices(opts: SubscriberListOptions = {}): Promise<JsonRecord> {
+    const params: Record<string, string> = {};
+    if (opts.pageSize) params["pageSize"] = String(opts.pageSize);
+    if (opts.pageToken) params["pageToken"] = opts.pageToken;
+    return this.doJSON<JsonRecord>("GET", `${this.userPath()}/pairedDevices`, undefined, params);
+  }
+
+  async getPairedDevice(deviceId: string): Promise<JsonRecord> {
+    return this.doJSON<JsonRecord>("GET", `${this.userPath()}/pairedDevices/${encodeURIComponent(deviceId)}`);
+  }
+
+  // Subscriptions (per-user, nested under a subscriber)
+  async listSubscriptions(subscriberId: string, opts: SubscriberListOptions = {}): Promise<JsonRecord> {
+    const params: Record<string, string> = {};
+    if (opts.pageSize) params["pageSize"] = String(opts.pageSize);
+    if (opts.pageToken) params["pageToken"] = opts.pageToken;
+    return this.doJSON<JsonRecord>(
+      "GET",
+      `${this.projectPath()}/subscribers/${encodeURIComponent(subscriberId)}/subscriptions`,
+      undefined,
+      params,
+    );
+  }
+
+  async createSubscription(
+    subscriberId: string,
+    body: { user: string; dataTypes?: string[]; subscriptionId?: string },
+  ): Promise<JsonRecord> {
+    const params = body.subscriptionId ? { subscriptionId: body.subscriptionId } : undefined;
+    const { subscriptionId: _, ...requestBody } = body;
+    return this.doJSON<JsonRecord>(
+      "POST",
+      `${this.projectPath()}/subscribers/${encodeURIComponent(subscriberId)}/subscriptions`,
+      requestBody,
+      params,
+    );
+  }
+
+  async patchSubscription(
+    subscriberId: string,
+    subscriptionId: string,
+    body: JsonRecord,
+    updateMask?: string,
+  ): Promise<JsonRecord> {
+    const params = updateMask ? { updateMask } : undefined;
+    return this.doJSON<JsonRecord>(
+      "PATCH",
+      `${this.projectPath()}/subscribers/${encodeURIComponent(subscriberId)}/subscriptions/${encodeURIComponent(subscriptionId)}`,
+      body,
+      params,
+    );
+  }
+
+  async deleteSubscription(subscriberId: string, subscriptionId: string): Promise<void> {
+    await this.doJSON<void>(
+      "DELETE",
+      `${this.projectPath()}/subscribers/${encodeURIComponent(subscriberId)}/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    );
+  }
+
   // Raw API access
   async rawRequest(method: string, path: string, body?: JsonRecord, params?: Record<string, string>): Promise<JsonRecord> {
     const cleanPath = path.startsWith("/") ? path.slice(1) : path;

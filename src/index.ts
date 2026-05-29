@@ -15,6 +15,8 @@ import { makeAgentCommand } from "./commands/agent.js";
 import { makeAPICommand } from "./commands/api.js";
 import { makeProfileCmdCommand } from "./commands/profile-cmd.js";
 import { makeCompletionCommand } from "./commands/completion.js";
+import { makeDevicesCommand } from "./commands/devices.js";
+import { makeIrnCommand } from "./commands/irn.js";
 
 const VERSION = "1.0.0";
 
@@ -73,6 +75,8 @@ program.addCommand(makeTypesCommand(getOutputOpts));
 program.addCommand(makeEndpointsCommand(getOutputOpts));
 program.addCommand(makeDoctorCommand(getOutputOpts));
 program.addCommand(makeProfileCmdCommand(getOutputOpts));
+program.addCommand(makeDevicesCommand(getOutputOpts));
+program.addCommand(makeIrnCommand(getOutputOpts));
 program.addCommand(makeAgentCommand(getOutputOpts));
 program.addCommand(makeAPICommand(getOutputOpts));
 program.addCommand(makeCompletionCommand(getOutputOpts));

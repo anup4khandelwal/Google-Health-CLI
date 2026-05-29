@@ -12,7 +12,7 @@ import {
 
 describe("DATA_TYPES", () => {
   it("has 31 entries", () => {
-    expect(DATA_TYPES).toHaveLength(31);
+    expect(DATA_TYPES).toHaveLength(49);
   });
 
   it("all entries have required fields", () => {
@@ -40,7 +40,7 @@ describe("DATA_TYPES", () => {
 
 describe("REST_OPERATIONS", () => {
   it("has 19 entries", () => {
-    expect(REST_OPERATIONS).toHaveLength(19);
+    expect(REST_OPERATIONS).toHaveLength(26);
   });
 
   it("all entries have method, path, and description", () => {
@@ -86,9 +86,9 @@ describe("lookupType", () => {
 });
 
 describe("scope helpers", () => {
-  it("readOnlyScopes returns only .read scopes", () => {
+  it("readOnlyScopes returns only .read or .readonly scopes", () => {
     const scopes = readOnlyScopes();
-    expect(scopes.every((s) => s.endsWith(".read"))).toBe(true);
+    expect(scopes.every((s) => s.endsWith(".read") || s.endsWith(".readonly"))).toBe(true);
     expect(scopes.length).toBeGreaterThan(0);
   });
 
@@ -103,6 +103,7 @@ describe("scope helpers", () => {
   });
 
   it("read + write = all scopes", () => {
+    // IRN_READ and DEVICES_READ use .readonly suffix, not .read/.write
     expect(readOnlyScopes().length + writeScopes().length).toBe(allScopes().length);
   });
 });
