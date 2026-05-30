@@ -11,7 +11,11 @@ const COMMANDS = [
   "profile get", "profile update",
   "settings get", "settings update",
   "identity",
+  "irn",
+  "devices list", "devices get",
   "subscribers list", "subscribers create", "subscribers patch", "subscribers delete",
+  "subscribers subscriptions-list", "subscribers subscriptions-create",
+  "subscribers subscriptions-patch", "subscribers subscriptions-delete",
   "types list", "types get",
   "endpoints",
   "doctor",
@@ -62,7 +66,11 @@ _ghealth_completions() {
       return 0
       ;;
     subscribers)
-      COMPREPLY=( $(compgen -W "list create patch delete" -- "\${cur}") )
+      COMPREPLY=( $(compgen -W "list create patch delete subscriptions-list subscriptions-create subscriptions-patch subscriptions-delete" -- "\${cur}") )
+      return 0
+      ;;
+    devices)
+      COMPREPLY=( $(compgen -W "list get" -- "\${cur}") )
       return 0
       ;;
     types)
@@ -115,7 +123,9 @@ _ghealth() {
     'profile:Manage user profile'
     'settings:Manage user settings'
     'identity:Retrieve user identity'
-    'subscribers:Manage webhook subscribers'
+    'irn:Irregular Rhythm Notification (AFib) profile'
+    'devices:List and inspect paired trackers and smartwatches'
+    'subscribers:Manage webhook subscribers and subscriptions'
     'types:Inspect supported data types'
     'endpoints:List REST API endpoints'
     'doctor:Verify local configuration'
@@ -130,6 +140,8 @@ _ghealth() {
   local -a data_cmds=('list' 'get' 'create' 'patch' 'delete' 'batch-delete' 'reconcile' 'export-tcx' 'import' 'export' 'summarize')
   local -a rollup_cmds=('daily' 'physical')
   local -a agent_cmds=('manifest' 'capabilities' 'schema')
+  local -a devices_cmds=('list' 'get')
+  local -a subscriber_cmds=('list' 'create' 'patch' 'delete' 'subscriptions-list' 'subscriptions-create' 'subscriptions-patch' 'subscriptions-delete')
   local -a formats=('auto' 'table' 'json' 'ndjson' 'csv' 'markdown')
   local -a date_shorthands=('today' 'yesterday' '7d' '30d' '90d' 'this-week' 'last-week' 'this-month' 'last-month')
 
@@ -141,6 +153,7 @@ _ghealth() {
     '--user[Override user resource]:user:' \\
     '--project[Override project ID]:project:' \\
     '--profile[Use named profile]:profile:' \\
+    '--retries[Retry count]:n:' \\
     '(-h --help)'{-h,--help}'[Show help]' \\
     '(-v --version)'{-v,--version}'[Show version]' \\
     '1: :->cmd' \\
@@ -154,6 +167,8 @@ _ghealth() {
         config) _describe 'config commands' config_cmds ;;
         data) _describe 'data commands' data_cmds ;;
         rollup) _describe 'rollup commands' rollup_cmds ;;
+        devices) _describe 'devices commands' devices_cmds ;;
+        subscribers) _describe 'subscribers commands' subscriber_cmds ;;
         agent) _describe 'agent commands' agent_cmds ;;
         completion) _describe 'shell' '(bash zsh fish)' ;;
       esac
@@ -170,27 +185,29 @@ function fishScript(): string {
 # Add to ~/.config/fish/completions/ghealth.fish or run:
 #   ghealth completion fish > ~/.config/fish/completions/ghealth.fish
 
-set -l subcommands auth config data rollup profile settings identity subscribers types endpoints doctor profiles agent api completion
+set -l subcommands auth config data rollup profile settings identity irn devices subscribers types endpoints doctor profiles agent api completion
 
 # Disable file completions
 complete -c ghealth -f
 
 # Top-level subcommands
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a auth       -d 'Manage OAuth authentication'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a config     -d 'Manage local configuration'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a data       -d 'Read and write health data points'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a rollup     -d 'Query health data rollups'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a profile    -d 'Manage user profile'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a settings   -d 'Manage user settings'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a identity   -d 'Retrieve user identity'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a subscribers -d 'Manage webhook subscribers'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a types      -d 'Inspect supported data types'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a endpoints  -d 'List REST API endpoints'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a doctor     -d 'Verify local configuration'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a profiles   -d 'Manage named profiles'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a agent      -d 'Output structured metadata'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a api        -d 'Make raw API requests'
-complete -c ghealth -n '__fish_use_subcommand $subcommands' -a completion -d 'Generate shell completion scripts'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a auth        -d 'Manage OAuth authentication'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a config      -d 'Manage local configuration'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a data        -d 'Read and write health data points'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a rollup      -d 'Query health data rollups'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a profile     -d 'Manage user profile'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a settings    -d 'Manage user settings'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a identity    -d 'Retrieve user identity'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a irn         -d 'Irregular Rhythm Notification (AFib) profile'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a devices     -d 'List and inspect paired trackers and smartwatches'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a subscribers -d 'Manage webhook subscribers and subscriptions'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a types       -d 'Inspect supported data types'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a endpoints   -d 'List REST API endpoints'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a doctor      -d 'Verify local configuration'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a profiles    -d 'Manage named profiles'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a agent       -d 'Output structured metadata'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a api         -d 'Make raw API requests'
+complete -c ghealth -n '__fish_use_subcommand $subcommands' -a completion  -d 'Generate shell completion scripts'
 
 # auth subcommands
 complete -c ghealth -n '__fish_seen_subcommand_from auth' -a 'login status revoke refresh'
@@ -203,6 +220,12 @@ complete -c ghealth -n '__fish_seen_subcommand_from data' -a 'list get create pa
 
 # rollup subcommands
 complete -c ghealth -n '__fish_seen_subcommand_from rollup' -a 'daily physical'
+
+# devices subcommands
+complete -c ghealth -n '__fish_seen_subcommand_from devices' -a 'list get'
+
+# subscribers subcommands
+complete -c ghealth -n '__fish_seen_subcommand_from subscribers' -a 'list create patch delete subscriptions-list subscriptions-create subscriptions-patch subscriptions-delete'
 
 # agent subcommands
 complete -c ghealth -n '__fish_seen_subcommand_from agent' -a 'manifest capabilities schema'

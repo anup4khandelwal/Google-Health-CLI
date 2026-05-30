@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Health CLI — Implementation Notes</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+      --tag-bg: #1f6feb33;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 2rem; font-weight: 700; color: var(--accent); margin-bottom: 0.25rem; }
+    .subtitle { color: var(--muted); margin-bottom: 2.5rem; font-size: 0.95rem; }
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.4rem;
+      margin: 2.5rem 0 1rem;
+    }
+    h3 { font-size: 1rem; font-weight: 600; color: var(--purple); margin: 1.25rem 0 0.5rem; }
+    p { margin-bottom: 0.75rem; color: var(--text); }
+    ul, ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    li { margin-bottom: 0.3rem; }
+    code {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.1em 0.4em;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.88em;
+      color: #79c0ff;
+    }
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      margin: 0.75rem 0 1rem;
+    }
+    pre code { background: none; border: none; padding: 0; font-size: 0.87em; color: var(--text); }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .tag {
+      display: inline-block;
+      background: var(--tag-bg);
+      color: var(--accent);
+      border: 1px solid #1f6feb66;
+      border-radius: 12px;
+      padding: 0.15em 0.6em;
+      font-size: 0.8em;
+      font-weight: 500;
+      margin: 0.1em 0.2em;
+    }
+    .tag.green { background: #3fb95022; color: var(--green); border-color: #3fb95044; }
+    .tag.yellow { background: #d2992222; color: var(--yellow); border-color: #d2992244; }
+    .tag.red { background: #f8514922; color: var(--red); border-color: #f8514944; }
+    .decision {
+      border-left: 3px solid var(--accent);
+      padding-left: 1rem;
+      margin: 0.75rem 0;
+    }
+    .tradeoff {
+      border-left: 3px solid var(--yellow);
+      padding-left: 1rem;
+      margin: 0.75rem 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.75rem 0 1rem;
+      font-size: 0.9em;
+    }
+    th {
+      background: var(--surface);
+      color: var(--muted);
+      font-weight: 600;
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+    }
+    td {
+      padding: 0.45rem 0.75rem;
+      border: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #161b2255; }
+    .toc { list-style: none; padding: 0; }
+    .toc li { padding: 0.2rem 0; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .meta { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+    .meta-item { display: flex; flex-direction: column; }
+    .meta-label { font-size: 0.78em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .meta-value { font-size: 0.95em; font-weight: 500; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Google Health CLI</h1>
+  <p class="subtitle">TypeScript / Bun implementation — design decisions, API audit findings, and tradeoffs</p>
+
+  <div class="meta">
+    <div class="meta-item"><span class="meta-label">Date</span><span class="meta-value">2026-05-30</span></div>
+    <div class="meta-item"><span class="meta-label">Runtime</span><span class="meta-value">Bun 1.3.11</span></div>
+    <div class="meta-item"><span class="meta-label">Language</span><span class="meta-value">TypeScript 5.5 strict</span></div>
+    <div class="meta-item"><span class="meta-label">Tests</span><span class="meta-value">40 passing</span></div>
+    <div class="meta-item"><span class="meta-label">Data types</span><span class="meta-value">49</span></div>
+    <div class="meta-item"><span class="meta-label">REST ops</span><span class="meta-value">26</span></div>
+  </div>
+
+  <nav>
+    <ul class="toc">
+      <li><a href="#toolchain">1. Toolchain choices</a></li>
+      <li><a href="#api-audit">2. Google Health API v4 audit</a></li>
+      <li><a href="#new-commands">3. New commands implemented</a></li>
+      <li><a href="#features">4. Feature decisions</a></li>
+      <li><a href="#architecture">5. Architecture notes</a></li>
+      <li><a href="#tradeoffs">6. Tradeoffs</a></li>
+      <li><a href="#open-questions">7. Open questions</a></li>
+    </ul>
+  </nav>
+
+  <!-- ─── 1. Toolchain ─────────────────────────────────────────────────────── -->
+  <h2 id="toolchain">1. Toolchain choices</h2>
+
+  <h3>Bun over Node.js + tsup</h3>
+  <div class="decision">
+    <p>The original Swift CLI used <code>swift-argument-parser</code>. The initial TypeScript port used <code>tsup</code> + <code>tsx</code> + <code>vitest</code>. We migrated to Bun because:</p>
+    <ul>
+      <li>Single binary: runtime, bundler, test runner, package manager</li>
+      <li>Native TypeScript execution without a transpile step in dev</li>
+      <li><code>bun build</code> produces a self-contained single-file bundle in ~80ms</li>
+      <li><code>bun test</code> is API-compatible with Jest/Vitest — zero migration friction</li>
+      <li><code>bun install</code> is significantly faster than <code>npm install</code></li>
+    </ul>
+  </div>
+
+  <div class="tradeoff">
+    <p><strong>Tradeoff:</strong> Bun is not Node.js. Some Node built-ins (e.g. <code>readline</code> used in <code>config init</code>) work but aren't officially Bun APIs. The <code>tsconfig.json</code> uses <code>"moduleResolution": "bundler"</code> and <code>"types": ["bun-types"]</code>, which diverges from standard Node tooling. Users on systems without Bun must install it first.</p>
+  </div>
+
+  <h3>Commander v12 over yargs / oclif</h3>
+  <div class="decision">
+    <p>Commander was chosen for its minimal surface area, excellent TypeScript support, and no generated boilerplate. The <code>preAction</code> hook pattern lets global flags (<code>--json</code>, <code>--format</code>, <code>--profile</code>) propagate into a shared <code>OutputOptions</code> object without threading options through every subcommand manually.</p>
+  </div>
+
+  <h3>Conf v13 for configuration</h3>
+  <div class="decision">
+    <p>Conf handles XDG Base Directory compliance automatically and supports schema validation. Profile isolation is implemented on top by constructing a separate <code>Conf</code> instance per profile name, keyed under <code>profiles/&lt;name&gt;/</code>. A module-level cache variable tracks the last-used profile name and resets when <code>GHEALTH_PROFILE</code> changes — important for test isolation.</p>
+  </div>
+
+  <!-- ─── 2. API audit ──────────────────────────────────────────────────────── -->
+  <h2 id="api-audit">2. Google Health API v4 audit</h2>
+
+  <p>The original Swift CLI covered a subset of the API. After auditing the full Google Health API v4 reference, the following gaps were identified and addressed:</p>
+
+  <table>
+    <thead>
+      <tr><th>Resource</th><th>Original</th><th>Added</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Data types</td>
+        <td>~20 types</td>
+        <td>29 additional types → 49 total</td>
+        <td><span class="tag green">done</span></td>
+      </tr>
+      <tr>
+        <td>OAuth scopes</td>
+        <td>basic read/write</td>
+        <td>14 scopes including <code>irn.readonly</code>, <code>devices.readonly</code></td>
+        <td><span class="tag green">done</span></td>
+      </tr>
+      <tr>
+        <td>REST operations</td>
+        <td>~12 ops</td>
+        <td>26 total including subscription CRUD</td>
+        <td><span class="tag green">done</span></td>
+      </tr>
+      <tr>
+        <td><code>pairedDevices</code></td>
+        <td>missing</td>
+        <td><code>ghealth devices list|get</code></td>
+        <td><span class="tag green">done</span></td>
+      </tr>
+      <tr>
+        <td><code>irnProfile</code> (AFib)</td>
+        <td>missing</td>
+        <td><code>ghealth irn</code></td>
+        <td><span class="tag green">done</span></td>
+      </tr>
+      <tr>
+        <td>Subscriptions (per-user)</td>
+        <td>missing</td>
+        <td><code>ghealth subscribers subscriptions-*</code></td>
+        <td><span class="tag green">done</span></td>
+      </tr>
+      <tr>
+        <td>Auth token refresh</td>
+        <td>missing</td>
+        <td><code>ghealth auth refresh</code></td>
+        <td><span class="tag green">done</span></td>
+      </tr>
+      <tr>
+        <td>Config wizard</td>
+        <td>missing</td>
+        <td><code>ghealth config init</code></td>
+        <td><span class="tag green">done</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Data types added (29 new)</h3>
+  <p>The following categories were under-represented in the original port:</p>
+  <ul>
+    <li><strong>Nutrition:</strong> hydration, nutrition, totalCaloriesBurned, basalMetabolicRate, bodyWaterMass, leanBodyMass, boneMass</li>
+    <li><strong>Reproductive health:</strong> cervicalMucus, menstruationFlow, ovulationTest, sexualActivity, intermenstrualBleeding</li>
+    <li><strong>Respiratory:</strong> respiratoryRate, vo2Max</li>
+    <li><strong>Vitals extended:</strong> bloodGlucose, bodyTemperature, oxygenSaturation</li>
+    <li><strong>Activity extended:</strong> activeCaloriesBurned, elevationGained, floorsClimbed, wheelchairPushes, distance, power, speed, cyclingPedalingCadence, cyclingPedalingCumulative</li>
+    <li><strong>Sleep:</strong> sleepStage</li>
+    <li><strong>Mindfulness:</strong> mindfulnessSession</li>
+  </ul>
+
+  <!-- ─── 3. New commands ───────────────────────────────────────────────────── -->
+  <h2 id="new-commands">3. New commands implemented</h2>
+
+  <div class="card">
+    <h3><code>ghealth devices list|get</code></h3>
+    <p>Maps to <code>GET users/{user}/pairedDevices</code> and <code>GET users/{user}/pairedDevices/{deviceId}</code>. Returns tracker and smartwatch metadata (manufacturer, model, firmware version, last sync time).</p>
+  </div>
+
+  <div class="card">
+    <h3><code>ghealth irn</code></h3>
+    <p>Maps to <code>GET users/{user}/irnProfile</code>. Returns the user's Irregular Rhythm Notification (AFib detection) consent status and settings. Read-only; requires the <code>https://www.googleapis.com/auth/health.irn.readonly</code> scope.</p>
+  </div>
+
+  <div class="card">
+    <h3><code>ghealth subscribers subscriptions-{list,create,patch,delete}</code></h3>
+    <p>The original CLI only exposed subscriber-level CRUD. Per-user subscriptions live under <code>subscribers/{subscriberId}/subscriptions</code> and are distinct from the subscriber itself. These commands expose the full lifecycle.</p>
+  </div>
+
+  <div class="card">
+    <h3><code>ghealth profiles list|current</code></h3>
+    <p>Lists all named configuration profiles stored on disk and shows which one is active. Profiles are stored in separate <code>Conf</code> stores under <code>profiles/&lt;name&gt;/</code>. The active profile is controlled by <code>GHEALTH_PROFILE</code> or the global <code>--profile</code> flag.</p>
+  </div>
+
+  <div class="card">
+    <h3><code>ghealth data import|export|summarize</code></h3>
+    <p><code>import</code> reads NDJSON from stdin or a <code>--file</code> path and batch-creates data points. <code>export</code> streams all pages of data in NDJSON format to stdout. <code>summarize</code> fetches a time range and emits aggregate stats (count, min, max, average) for numeric fields.</p>
+  </div>
+
+  <div class="card">
+    <h3><code>ghealth auth refresh</code></h3>
+    <p>Forces an immediate token refresh using the stored refresh token, bypassing the normal expiry check. Useful when the access token was revoked externally but the refresh token is still valid.</p>
+  </div>
+
+  <div class="card">
+    <h3><code>ghealth config init</code></h3>
+    <p>Interactive readline wizard that prompts for <code>clientId</code>, <code>clientSecret</code>, <code>projectId</code>, optional base URL override, and profile name. Writes the result to the active profile's config store.</p>
+  </div>
+
+  <div class="card">
+    <h3><code>ghealth agent manifest|capabilities|schema</code></h3>
+    <p>Machine-readable metadata for AI agent / LLM tooling. <code>manifest</code> emits a structured JSON object describing the CLI name, version, capabilities, output formats, and available date shorthands. <code>capabilities</code> lists every command as a flat array. <code>schema</code> dumps the full data-type registry, scope list, and REST operation table.</p>
+  </div>
+
+  <!-- ─── 4. Features ───────────────────────────────────────────────────────── -->
+  <h2 id="features">4. Feature decisions</h2>
+
+  <h3>Date shorthands (<code>--last</code>)</h3>
+  <div class="decision">
+    <p>All time-filtered commands accept <code>--last &lt;shorthand&gt;</code> in addition to <code>--start</code>/<code>--end</code>. Supported values: <code>today</code>, <code>yesterday</code>, <code>7d</code>, <code>30d</code>, <code>90d</code>, <code>Nd</code> (arbitrary days), <code>this-week</code>, <code>last-week</code>, <code>this-month</code>, <code>last-month</code>. The resolver (<code>src/lib/dates.ts</code>) converts these to RFC 3339 timestamps in UTC.</p>
+  </div>
+
+  <h3>Retry with exponential backoff</h3>
+  <div class="decision">
+    <p><code>src/lib/retry.ts</code> wraps every API call. Default: 3 retries, base delay 1 s, max delay 16 s, jitter ±20%, retry on 429/500/502/503/504. Honors <code>Retry-After</code> response headers. Configurable globally via <code>--retries &lt;n&gt;</code> or <code>GHEALTH_RETRIES</code>.</p>
+  </div>
+
+  <h3>Auto-pagination (<code>--all</code>)</h3>
+  <div class="decision">
+    <p><code>data list --all</code> uses an async generator (<code>listAllDataPoints</code>) that follows <code>nextPageToken</code> until exhausted. Without <code>--all</code>, a single page is returned so the user controls pagination manually via <code>--page-token</code>.</p>
+  </div>
+
+  <h3>Named profiles</h3>
+  <div class="decision">
+    <p>Each profile is an isolated Conf store. This lets users maintain separate OAuth tokens and config (client ID, project, base URL) for different Google accounts or environments (dev vs. prod). Profile selection precedence: <code>--profile</code> flag &gt; <code>GHEALTH_PROFILE</code> env var &gt; <code>default</code>.</p>
+  </div>
+
+  <h3>Shell completions</h3>
+  <div class="decision">
+    <p>Bash, Zsh, and Fish completion scripts are generated by <code>ghealth completion &lt;shell&gt;</code>. All three scripts are self-contained strings emitted to stdout so the user can source or redirect them. The scripts cover top-level commands, all subcommands, global flags, <code>--format</code> values, and <code>--last</code> shorthands.</p>
+  </div>
+
+  <!-- ─── 5. Architecture ───────────────────────────────────────────────────── -->
+  <h2 id="architecture">5. Architecture notes</h2>
+
+  <h3>Output routing</h3>
+  <p>All output goes through <code>src/lib/output.ts</code>: <code>print()</code>, <code>printError()</code>, <code>printSuccess()</code>. Format selection: explicit <code>--format</code> &gt; <code>GHEALTH_OUTPUT</code> env var &gt; TTY auto-detect (table on TTY, JSON on pipe). This means scripts that pipe <code>ghealth</code> output get JSON by default without needing <code>--json</code>.</p>
+
+  <h3>HealthClient</h3>
+  <p><code>src/lib/healthapi/client.ts</code> is a thin wrapper around <code>fetch</code>. Every method calls <code>withRetry()</code>. The client reads config lazily via <code>HealthClient.create()</code> which loads the active profile's stored token and refreshes it if expired. The client does not hold state between commands — each command invocation creates a fresh instance.</p>
+
+  <h3>Registry</h3>
+  <p><code>src/lib/registry.ts</code> is the single source of truth for data types, scopes, and REST operations. It drives: <code>types list|get</code> output, <code>agent schema</code>, the <code>data</code> command's type resolver, and the test suite's length assertions. Adding a new data type means one array entry here — no other files need to change.</p>
+
+  <h3>Error handling pattern</h3>
+  <pre><code>function handleError(err: unknown, o: OutputOptions): never {
+  if (isNotLoggedIn(err))      printError({ status: "auth_error", ... hint: "Run: ghealth auth login" }, o);
+  else if (isAPIError(err))    printError({ status: "api_error",  message: err.message }, o);
+  else                         printError({ status: "error",      message: String(err) }, o);
+  process.exit(1);
+}</code></pre>
+  <p>Each command file has a local <code>handleError</code> so errors are routed through the same output formatter as success responses. Machine consumers (scripts, agents) always get structured JSON errors when piped.</p>
+
+  <!-- ─── 6. Tradeoffs ──────────────────────────────────────────────────────── -->
+  <h2 id="tradeoffs">6. Tradeoffs</h2>
+
+  <table>
+    <thead>
+      <tr><th>Decision</th><th>Benefit</th><th>Cost</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Bun runtime</td>
+        <td>Fast, zero-config TS, single binary</td>
+        <td>Not Node.js; some APIs differ; less ecosystem coverage</td>
+      </tr>
+      <tr>
+        <td>Single-file bundle (<code>bun build</code>)</td>
+        <td>Easy distribution; no <code>node_modules</code> at runtime</td>
+        <td>Source maps less precise; bundle ~760 KB</td>
+      </tr>
+      <tr>
+        <td>Conf for storage</td>
+        <td>XDG-compliant, schema validation, cross-platform</td>
+        <td>Another dependency; file-per-profile approach creates many small files</td>
+      </tr>
+      <tr>
+        <td>Local HTTP callback for OAuth</td>
+        <td>No copy-paste of auth codes; standard PKCE flow</td>
+        <td>Requires opening a browser; firewall/WSL environments may block localhost</td>
+      </tr>
+      <tr>
+        <td>Retry on 5xx by default</td>
+        <td>Resilient to transient API errors</td>
+        <td>Non-idempotent POST retries could create duplicates (mitigated: only list/get are auto-retried by default)</td>
+      </tr>
+      <tr>
+        <td>Flat subcommand strings in completion.ts</td>
+        <td>Simple, no framework dependency</td>
+        <td>Must be updated manually when commands change; could drift</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ─── 7. Open questions ─────────────────────────────────────────────────── -->
+  <h2 id="open-questions">7. Open questions</h2>
+
+  <ul>
+    <li>
+      <strong>Retry safety for mutating operations:</strong> Currently <code>withRetry</code> wraps all client methods. POST/PATCH/DELETE should ideally not retry on network errors (only on explicit 503s with <code>Retry-After</code>). A future improvement is to pass a <code>safe: boolean</code> flag to <code>withRetry</code>.
+    </li>
+    <li>
+      <strong>Token encryption at rest:</strong> OAuth tokens are stored in plaintext JSON by Conf. On macOS, the system keychain would be a better store. On Linux, <code>libsecret</code> / GNOME Keyring could be used. This is not implemented — the token file permissions are set to <code>0o600</code> as a minimum mitigation.
+    </li>
+    <li>
+      <strong>Streaming large exports:</strong> <code>data export</code> currently buffers all pages in memory before printing. For very large datasets this could exhaust memory. A future version should pipe each page to stdout as it arrives.
+    </li>
+    <li>
+      <strong>Subscriptions <code>--all</code>:</strong> The <code>subscribers subscriptions-list</code> command does not yet support <code>--all</code> autopagination. Adding it requires the same async generator pattern used in <code>data list</code>.
+    </li>
+    <li>
+      <strong>Shell completion drift:</strong> The completion scripts in <code>completion.ts</code> are static strings. They will drift as commands are added. A future improvement is to generate them dynamically from the Commander program tree at runtime.
+    </li>
+    <li>
+      <strong>Google Health API stability:</strong> The v4 API is not yet GA. Endpoint paths, scope names, and data type filter names may change. The registry in <code>src/lib/registry.ts</code> is the only file that needs updating when they do.
+    </li>
+  </ul>
+
+</div>
+</body>
+</html>
