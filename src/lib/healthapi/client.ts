@@ -108,6 +108,7 @@ export class HealthClient {
     path: string,
     body?: unknown,
     params?: Record<string, string>,
+    safe: boolean = true,
   ): Promise<T> {
     return withRetry(async () => {
       const auth = await this.authHeader();
@@ -140,7 +141,7 @@ export class HealthClient {
 
       if (!text) return {} as T;
       return JSON.parse(text) as T;
-    }, this.retryOptions);
+    }, { ...this.retryOptions, safe });
   }
 
   private async doBytes(method: string, path: string, params?: Record<string, string>): Promise<Buffer> {
@@ -217,7 +218,7 @@ export class HealthClient {
   }
 
   async createDataPoint(dataType: string, body: JsonRecord): Promise<JsonRecord> {
-    return this.doJSON<JsonRecord>("POST", `${this.userPath()}/${dataType}`, body);
+    return this.doJSON<JsonRecord>("POST", `${this.userPath()}/${dataType}`, body, undefined, false);
   }
 
   async patchDataPoint(dataType: string, dataId: string, body: JsonRecord, opts: UpdateOptions = {}): Promise<JsonRecord> {
@@ -230,11 +231,11 @@ export class HealthClient {
   }
 
   async batchDeleteDataPoints(dataType: string, ids: string[]): Promise<JsonRecord> {
-    return this.doJSON<JsonRecord>("POST", `${this.userPath()}/${dataType}:batchDelete`, { ids });
+    return this.doJSON<JsonRecord>("POST", `${this.userPath()}/${dataType}:batchDelete`, { ids }, undefined, false);
   }
 
   async reconcileDataPoints(dataType: string): Promise<JsonRecord> {
-    return this.doJSON<JsonRecord>("POST", `${this.userPath()}/${dataType}:reconcile`, {});
+    return this.doJSON<JsonRecord>("POST", `${this.userPath()}/${dataType}:reconcile`, {}, undefined, false);
   }
 
   // Rollups
@@ -268,7 +269,7 @@ export class HealthClient {
   }
 
   async createSubscriber(body: CreateSubscriberOptions): Promise<JsonRecord> {
-    return this.doJSON<JsonRecord>("POST", `${this.projectPath()}/subscribers`, body);
+    return this.doJSON<JsonRecord>("POST", `${this.projectPath()}/subscribers`, body, undefined, false);
   }
 
   async patchSubscriber(subscriberId: string, body: JsonRecord, updateMask?: string): Promise<JsonRecord> {
@@ -315,6 +316,19 @@ export class HealthClient {
     );
   }
 
+  async *listAllSubscriptions(
+    subscriberId: string,
+    opts: Omit<SubscriberListOptions, "pageToken"> = {},
+  ): AsyncGenerator<JsonRecord[]> {
+    let pageToken: string | undefined;
+    do {
+      const result = await this.listSubscriptions(subscriberId, { ...opts, pageToken });
+      const items = extractItems(result);
+      if (items.length > 0) yield items;
+      pageToken = result["nextPageToken"] as string | undefined;
+    } while (pageToken);
+  }
+
   async createSubscription(
     subscriberId: string,
     body: { user: string; dataTypes?: string[]; subscriptionId?: string },
@@ -326,6 +340,7 @@ export class HealthClient {
       `${this.projectPath()}/subscribers/${encodeURIComponent(subscriberId)}/subscriptions`,
       requestBody,
       params,
+      false,
     );
   }
 

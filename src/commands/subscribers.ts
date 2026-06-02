@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { readFileSync } from "node:fs";
-import { HealthClient } from "../lib/healthapi/client.js";
+import { HealthClient, type JsonRecord } from "../lib/healthapi/client.js";
 import { print, printError, printSuccess, type OutputOptions } from "../lib/output.js";
 import { isNotLoggedIn } from "../lib/auth.js";
 import { isAPIError } from "../lib/healthapi/client.js";
@@ -107,15 +107,26 @@ export function makeSubscribersCommand(outOpts: () => OutputOptions): Command {
     .description("List per-user subscriptions for a subscriber")
     .option("--page-size <n>", "Max results per page")
     .option("--page-token <token>", "Pagination token")
+    .option("--all", "Fetch all pages automatically")
     .action(async (subscriberId: string, opts) => {
       const o = outOpts();
       try {
         const client = await HealthClient.create();
-        const result = await client.listSubscriptions(subscriberId, {
-          pageSize: opts.pageSize ? parseInt(opts.pageSize as string, 10) : undefined,
-          pageToken: opts.pageToken,
-        });
-        print(result, o);
+        if (opts.all) {
+          const all: JsonRecord[] = [];
+          for await (const page of client.listAllSubscriptions(subscriberId, {
+            pageSize: opts.pageSize ? parseInt(opts.pageSize as string, 10) : undefined,
+          })) {
+            all.push(...page);
+          }
+          print(all, o);
+        } else {
+          const result = await client.listSubscriptions(subscriberId, {
+            pageSize: opts.pageSize ? parseInt(opts.pageSize as string, 10) : undefined,
+            pageToken: opts.pageToken,
+          });
+          print(result, o);
+        }
       } catch (err) {
         handleError(err, o);
       }

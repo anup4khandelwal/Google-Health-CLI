@@ -11,8 +11,8 @@ import {
 } from "../lib/registry.js";
 
 describe("DATA_TYPES", () => {
-  it("has 31 entries", () => {
-    expect(DATA_TYPES).toHaveLength(49);
+  it("has 53 entries", () => {
+    expect(DATA_TYPES).toHaveLength(53);
   });
 
   it("all entries have required fields", () => {
@@ -98,12 +98,12 @@ describe("scope helpers", () => {
     expect(scopes.length).toBeGreaterThan(0);
   });
 
-  it("allScopes returns all 12 scopes", () => {
+  it("allScopes returns all scopes", () => {
     expect(allScopes()).toHaveLength(Object.keys(SCOPES).length);
   });
 
   it("read + write = all scopes", () => {
-    // IRN_READ and DEVICES_READ use .readonly suffix, not .read/.write
+    // IRN_READ, DEVICES_READ, ECG_READ, LOCATION_READ use .readonly suffix
     expect(readOnlyScopes().length + writeScopes().length).toBe(allScopes().length);
   });
 });

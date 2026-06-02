@@ -68,4 +68,24 @@ describe("withRetry", () => {
     ).rejects.toThrow("503");
     expect(calls).toBe(1);
   });
+
+  it("safe:false only retries on 429, not on 500/503", async () => {
+    let calls500 = 0;
+    await expect(
+      withRetry(
+        async () => { calls500++; throw new APIError(500, "Internal Server Error", "oops"); },
+        { retries: 3, baseDelayMs: 1, safe: false },
+      ),
+    ).rejects.toThrow("500");
+    expect(calls500).toBe(1); // no retries on 500 when safe:false
+
+    let calls429 = 0;
+    await expect(
+      withRetry(
+        async () => { calls429++; throw new APIError(429, "Too Many Requests", "rate"); },
+        { retries: 2, baseDelayMs: 1, safe: false },
+      ),
+    ).rejects.toThrow("429");
+    expect(calls429).toBe(3); // 429 still retried
+  });
 });

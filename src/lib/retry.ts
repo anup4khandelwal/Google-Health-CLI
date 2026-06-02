@@ -7,9 +7,17 @@ export interface RetryOptions {
   maxDelayMs?: number;
   /** HTTP status codes that should trigger a retry (default: 429, 500, 502, 503, 504) */
   retryOn?: number[];
+  /**
+   * Whether the operation is safe to retry (i.e. idempotent).
+   * When false, only retries on 429 — request was rate-limited before the
+   * server processed it, so retrying cannot cause duplicate side-effects.
+   * Default: true
+   */
+  safe?: boolean;
 }
 
 const DEFAULT_RETRY_ON = [429, 500, 502, 503, 504];
+const UNSAFE_RETRY_ON = [429];
 
 export class RetryableError extends Error {
   constructor(
@@ -42,8 +50,11 @@ export async function withRetry<T>(
     retries = 3,
     baseDelayMs = 1000,
     maxDelayMs = 16000,
-    retryOn = DEFAULT_RETRY_ON,
+    retryOn,
+    safe = true,
   } = options;
+
+  const effectiveRetryOn = retryOn ?? (safe ? DEFAULT_RETRY_ON : UNSAFE_RETRY_ON);
 
   let lastError: unknown;
 
@@ -55,7 +66,7 @@ export async function withRetry<T>(
 
       // Only retry on specific HTTP status codes
       const status = getStatusCode(err);
-      if (status === null || !retryOn.includes(status)) {
+      if (status === null || !effectiveRetryOn.includes(status)) {
         throw err;
       }
 

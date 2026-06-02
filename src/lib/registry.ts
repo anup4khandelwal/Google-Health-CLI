@@ -13,6 +13,8 @@ export const SCOPES = {
   NUTRITION_WRITE: "https://www.googleapis.com/auth/health.nutrition.write",
   IRN_READ: "https://www.googleapis.com/auth/health.irn.readonly",
   DEVICES_READ: "https://www.googleapis.com/auth/health.settings.readonly",
+  ECG_READ: "https://www.googleapis.com/auth/health.ecg.readonly",
+  LOCATION_READ: "https://www.googleapis.com/auth/health.location.readonly",
 } as const;
 
 export type Scope = (typeof SCOPES)[keyof typeof SCOPES];
@@ -322,7 +324,7 @@ export const DATA_TYPES: DataType[] = [
     filterName: "ElectrocardiogramRecord",
     recordType: "Session",
     operations: ["list", "get", "create", "patch", "delete"],
-    scope: SCOPES.METRICS_READ,
+    scope: SCOPES.ECG_READ,
     timeField: "startTime",
   },
   {
@@ -477,6 +479,43 @@ export const DATA_TYPES: DataType[] = [
     operations: ["list", "get", "create", "patch", "delete"],
     scope: SCOPES.SLEEP_READ,
     timeField: "startTime",
+  },
+  // --- Added from May 2026 API audit ---
+  {
+    name: "calories-in-heart-rate-zone",
+    endpoint: "caloriesInHeartRateZone",
+    filterName: "CaloriesInHeartRateZoneRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "run-vo2-max",
+    endpoint: "runVo2Max",
+    filterName: "RunVo2MaxRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.ACTIVITY_READ,
+    timeField: "time",
+  },
+  {
+    name: "food",
+    endpoint: "food",
+    filterName: "FoodRecord",
+    recordType: "Interval",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.NUTRITION_READ,
+    timeField: "startTime",
+  },
+  {
+    name: "core-body-temperature",
+    endpoint: "coreBodyTemperature",
+    filterName: "CoreBodyTemperatureRecord",
+    recordType: "Sample",
+    operations: ["list", "get", "create", "patch", "delete"],
+    scope: SCOPES.METRICS_READ,
+    timeField: "time",
   },
 ];
 
